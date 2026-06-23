@@ -12,6 +12,8 @@ This is a Node.js replacement for [OHDSI/Achilles](https://github.com/OHDSI/Achi
 
 ## Usage
 
+### Command line
+
 ```sh
 node index.js \
   --server <host> \
@@ -22,27 +24,48 @@ node index.js \
   --password <pass>
 ```
 
-Results and scratch tables land in `--results-schema` by default. Use `--scratch-schema` to separate them if needed.
+### Container
 
-### Options
+```sh
+docker run --rm \
+  -e ACHILLES_SERVER=<host> \
+  -e ACHILLES_DATABASE=<name> \
+  -e ACHILLES_CDM_SCHEMA=<schema> \
+  -e ACHILLES_RESULTS_SCHEMA=<schema> \
+  -e ACHILLES_USERNAME=<user> \
+  -e ACHILLES_PASSWORD=<pass> \
+  ghcr.io/center-for-health-informatics/achilles
+```
 
-| Option | Default | Description |
-|---|---|---|
-| `--server` | *(required)* | SQL Server hostname or IP |
-| `--database` | *(required)* | Database name |
-| `--cdm-schema` | *(required)* | Schema containing the OMOP CDM tables |
-| `--results-schema` | *(required)* | Schema for results tables |
-| `--scratch-schema` | results schema | Schema for temporary scratch tables |
-| `--username` | | SQL Server login (omit for Windows auth) |
-| `--password` | | SQL Server password |
-| `--cdm-version` | `5.4` | CDM version (`5.3` or `5.4`) |
-| `--source-name` | cdm_source table | CDM source name written to analysis 0 |
-| `--achilles-version` | package version | Version string written to analysis 0 |
-| `--compatible` | | Match R Achilles output where our results intentionally diverge (see below) |
-| `--prefix` | `tmpach` | Prefix for scratch tables |
-| `--small-cell-count` | `5` | Suppress result rows with count ≤ n |
-| `--analyses` | | Comma-separated list of analysis IDs to run |
-| `--all-analyses` | | Include non-default analyses (slow) |
+Build the image locally:
+
+```sh
+docker build -t achilles .
+```
+
+Results and scratch tables land in `--results-schema` / `ACHILLES_RESULTS_SCHEMA` by default. Use `--scratch-schema` / `ACHILLES_SCRATCH_SCHEMA` to separate them if needed.
+
+## Options
+
+All options can be set via CLI flag or environment variable. CLI flags take precedence.
+
+| CLI option | Env var | Default | Description |
+|---|---|---|---|
+| `--server` | `ACHILLES_SERVER` | *(required)* | SQL Server hostname or IP |
+| `--database` | `ACHILLES_DATABASE` | *(required)* | Database name |
+| `--cdm-schema` | `ACHILLES_CDM_SCHEMA` | *(required)* | Schema containing the OMOP CDM tables |
+| `--results-schema` | `ACHILLES_RESULTS_SCHEMA` | *(required)* | Schema for results tables |
+| `--scratch-schema` | `ACHILLES_SCRATCH_SCHEMA` | results schema | Schema for temporary scratch tables |
+| `--username` | `ACHILLES_USERNAME` | | SQL Server login (omit for Windows auth) |
+| `--password` | `ACHILLES_PASSWORD` | | SQL Server password |
+| `--cdm-version` | `ACHILLES_CDM_VERSION` | `5.4` | CDM version (`5.3` or `5.4`) |
+| `--source-name` | `ACHILLES_SOURCE_NAME` | cdm_source table | CDM source name written to analysis 0 |
+| `--achilles-version` | `ACHILLES_VERSION` | package version | Version string written to analysis 0 |
+| `--compatible` | `ACHILLES_COMPATIBLE` | | Match R Achilles output where our results intentionally diverge (see below) |
+| `--prefix` | `ACHILLES_PREFIX` | `tmpach` | Prefix for scratch tables |
+| `--small-cell-count` | `ACHILLES_SMALL_CELL_COUNT` | `5` | Suppress result rows with count ≤ n |
+| `--analyses` | `ACHILLES_ANALYSES` | | Comma-separated list of analysis IDs to run |
+| `--all-analyses` | `ACHILLES_ALL_ANALYSES` | | Include non-default analyses (slow) |
 
 ### Run a subset of analyses
 
@@ -55,7 +78,7 @@ node index.js --server localhost --database Testing \
 
 ### Non-default analyses
 
-83 of the 300 analyses are excluded by default (`IS_DEFAULT=0` in the Achilles metadata). These include expensive co-occurrence analyses. Pass `--all-analyses` to include them.
+83 of the 300 analyses are excluded by default (`IS_DEFAULT=0` in the Achilles metadata). These include expensive co-occurrence analyses. Pass `--all-analyses` / `ACHILLES_ALL_ANALYSES=1` to include them.
 
 ## Comparing against R Achilles
 
@@ -71,7 +94,16 @@ node compare.js \
   --password <pass>
 ```
 
-The comparison automatically handles the known intentional differences described below (treating them as PASS or NOTE rather than FAIL).
+| CLI option | Env var | Default | Description |
+|---|---|---|---|
+| `--server` | `ACHILLES_SERVER` | *(required)* | SQL Server hostname or IP |
+| `--database` | `ACHILLES_DATABASE` | *(required)* | Database name |
+| `--username` | `ACHILLES_USERNAME` | | SQL Server login |
+| `--password` | `ACHILLES_PASSWORD` | | SQL Server password |
+| `--schema-a` | `COMPARE_SCHEMA_A` | `chi_achilles` | First (ours) results schema |
+| `--schema-b` | `COMPARE_SCHEMA_B` | `ohdsi_achilles` | Second (reference) results schema |
+
+The comparison automatically handles the known intentional differences described below, treating them as `NOTE` rather than `FAIL`.
 
 ## How it works
 
@@ -91,8 +123,4 @@ Each numbered file in `sql/analyses/` is a self-contained SQL query that writes 
 
 ### Behavioral differences
 
-**analysis_id=1900 (source value completeness):** We correctly include unmapped `visit_detail.admitted_from_source_value` and `visit_detail.discharged_to_source_value` rows when `--cdm-version=5.4`. R Achilles silently omits these due to a SqlRender nested-conditional handling quirk. Pass `--compatible` to match the R Achilles behavior and omit these rows.
-
-### Technical notes
-
-- SqlRender's `{@var in (...)} ? {...} : {...}` conditional syntax is supported, including nested conditionals, which R's SqlRender handles inconsistently in some cases.
+**analysis_id=1900 (source value completeness):** We correctly include unmapped `visit_detail.admitted_from_source_value` and `visit_detail.discharged_to_source_value` rows when `--cdm-version=5.4`. R Achilles silently omits these due to a SqlRender nested-conditional handling quirk. Pass `--compatible` / `ACHILLES_COMPATIBLE=1` to match the R Achilles behavior and omit these rows.

@@ -1,15 +1,15 @@
-import { program } from 'commander'
+import { program, Option } from 'commander'
 import { connect, query, close } from './src/db.js'
 
 program
   .name('compare')
   .description('Compare two Achilles result schemas — typically chi_achilles vs ohdsi_achilles')
-  .requiredOption('--server <host>', 'SQL Server host')
-  .requiredOption('--database <name>', 'database name')
-  .option('--schema-a <schema>', 'first (ours) results schema', 'chi_achilles')
-  .option('--schema-b <schema>', 'second (reference) results schema', 'ohdsi_achilles')
-  .option('--username <user>', 'SQL Server username')
-  .option('--password <pass>', 'SQL Server password')
+  .addOption(new Option('--server <host>', 'SQL Server host').env('ACHILLES_SERVER').makeOptionMandatory())
+  .addOption(new Option('--database <name>', 'database name').env('ACHILLES_DATABASE').makeOptionMandatory())
+  .addOption(new Option('--username <user>', 'SQL Server username').env('ACHILLES_USERNAME'))
+  .addOption(new Option('--password <pass>', 'SQL Server password').env('ACHILLES_PASSWORD'))
+  .addOption(new Option('--schema-a <schema>', 'first (ours) results schema').env('COMPARE_SCHEMA_A').default('chi_achilles'))
+  .addOption(new Option('--schema-b <schema>', 'second (reference) results schema').env('COMPARE_SCHEMA_B').default('ohdsi_achilles'))
 
 program.parse()
 const opts = program.opts()

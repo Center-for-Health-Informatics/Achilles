@@ -1,7 +1,7 @@
 import { readFileSync } from 'fs'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
-import { program } from 'commander'
+import { program, Option } from 'commander'
 import { connect, query, close } from './src/db.js'
 import { createResultsTables, populateAnalysisTable } from './src/tables.js'
 import { runAnalyses } from './src/run.js'
@@ -12,21 +12,21 @@ const { version: pkgVersion } = JSON.parse(readFileSync(join(dir, 'package.json'
 program
   .name('achilles')
   .description('OMOP CDM characterization — SQL Server only')
-  .requiredOption('--server <host>', 'SQL Server host')
-  .requiredOption('--database <name>', 'database name')
-  .requiredOption('--cdm-schema <schema>', 'CDM schema (e.g. dbo)')
-  .requiredOption('--results-schema <schema>', 'results schema (e.g. dbo)')
-  .option('--scratch-schema <schema>', 'scratch schema (defaults to results schema)')
-  .option('--prefix <prefix>', 'scratch table prefix', 'tmpach')
-  .option('--small-cell-count <n>', 'suppress cells <= n', v => parseInt(v), 5)
-  .option('--cdm-version <version>', 'CDM version (e.g. 5.3 or 5.4)', '5.4')
-  .option('--source-name <name>', 'CDM source name (defaults to cdm_source table)')
-  .option('--achilles-version <ver>', 'version string written to analysis 0', pkgVersion)
-  .option('--compatible', 'match official R Achilles output where our results diverge')
-  .option('--all-analyses', 'include non-default analyses (slower)')
-  .option('--analyses <ids>', 'comma-separated analysis IDs to run')
-  .option('--username <user>', 'SQL Server username (omit for Windows auth)')
-  .option('--password <pass>', 'SQL Server password')
+  .addOption(new Option('--server <host>', 'SQL Server host').env('ACHILLES_SERVER').makeOptionMandatory())
+  .addOption(new Option('--database <name>', 'database name').env('ACHILLES_DATABASE').makeOptionMandatory())
+  .addOption(new Option('--cdm-schema <schema>', 'CDM schema (e.g. dbo)').env('ACHILLES_CDM_SCHEMA').makeOptionMandatory())
+  .addOption(new Option('--results-schema <schema>', 'results schema').env('ACHILLES_RESULTS_SCHEMA').makeOptionMandatory())
+  .addOption(new Option('--scratch-schema <schema>', 'scratch schema (defaults to results schema)').env('ACHILLES_SCRATCH_SCHEMA'))
+  .addOption(new Option('--username <user>', 'SQL Server username (omit for Windows auth)').env('ACHILLES_USERNAME'))
+  .addOption(new Option('--password <pass>', 'SQL Server password').env('ACHILLES_PASSWORD'))
+  .addOption(new Option('--cdm-version <version>', 'CDM version (e.g. 5.3 or 5.4)').env('ACHILLES_CDM_VERSION').default('5.4'))
+  .addOption(new Option('--source-name <name>', 'CDM source name (defaults to cdm_source table)').env('ACHILLES_SOURCE_NAME'))
+  .addOption(new Option('--achilles-version <ver>', 'version string written to analysis 0').env('ACHILLES_VERSION').default(pkgVersion))
+  .addOption(new Option('--compatible', 'match official R Achilles output where our results diverge').env('ACHILLES_COMPATIBLE'))
+  .addOption(new Option('--prefix <prefix>', 'scratch table prefix').env('ACHILLES_PREFIX').default('tmpach'))
+  .addOption(new Option('--small-cell-count <n>', 'suppress cells <= n').env('ACHILLES_SMALL_CELL_COUNT').default(5).argParser(v => parseInt(v)))
+  .addOption(new Option('--analyses <ids>', 'comma-separated analysis IDs to run').env('ACHILLES_ANALYSES'))
+  .addOption(new Option('--all-analyses', 'include non-default analyses (slower)').env('ACHILLES_ALL_ANALYSES'))
 
 program.parse()
 const opts = program.opts()
