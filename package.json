@@ -1,6 +1,6 @@
 {
   "name": "@chi/achilles",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "replacement for the unbelieveably-bloated R version",
   "homepage": "https://github.com/Center-for-Health-Informatics/Achilles#readme",
   "bugs": {

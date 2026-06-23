@@ -1,7 +1,13 @@
+import { readFileSync } from 'fs'
+import { fileURLToPath } from 'url'
+import { dirname, join } from 'path'
 import { program } from 'commander'
-import { connect, close } from './src/db.js'
+import { connect, query, close } from './src/db.js'
 import { createResultsTables, populateAnalysisTable } from './src/tables.js'
 import { runAnalyses } from './src/run.js'
+
+const dir = dirname(fileURLToPath(import.meta.url))
+const { version: pkgVersion } = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'))
 
 program
   .name('achilles')
@@ -14,6 +20,9 @@ program
   .option('--prefix <prefix>', 'scratch table prefix', 'tmpach')
   .option('--small-cell-count <n>', 'suppress cells <= n', v => parseInt(v), 5)
   .option('--cdm-version <version>', 'CDM version (e.g. 5.3 or 5.4)', '5.4')
+  .option('--source-name <name>', 'CDM source name (defaults to cdm_source table)')
+  .option('--achilles-version <ver>', 'version string written to analysis 0', pkgVersion)
+  .option('--compatible', 'match official R Achilles output where our results diverge')
   .option('--all-analyses', 'include non-default analyses (slower)')
   .option('--analyses <ids>', 'comma-separated analysis IDs to run')
   .option('--username <user>', 'SQL Server username (omit for Windows auth)')
@@ -37,15 +46,6 @@ if (opts.username) {
   dbConfig.options.trustedConnection = true
 }
 
-const vars = {
-  cdmDatabaseSchema: opts.cdmSchema,
-  resultsDatabaseSchema: opts.resultsSchema,
-  scratchDatabaseSchema: scratchSchema,
-  schemaDelim: '.',
-  tempAchillesPrefix: opts.prefix,
-  cdmVersion: opts.cdmVersion
-}
-
 const analysisIds = opts.analyses
   ? opts.analyses.split(',').map(Number)
   : null
@@ -53,6 +53,28 @@ const analysisIds = opts.analyses
 try {
   console.log('Connecting...')
   await connect(dbConfig)
+
+  let sourceName = opts.sourceName
+  if (!sourceName) {
+    try {
+      const r = await query(`SELECT TOP 1 cdm_source_name FROM ${opts.cdmSchema}.cdm_source`)
+      sourceName = r.recordset[0]?.cdm_source_name ?? ''
+    } catch {
+      sourceName = ''
+    }
+  }
+
+  const vars = {
+    cdmDatabaseSchema: opts.cdmSchema,
+    resultsDatabaseSchema: opts.resultsSchema,
+    scratchDatabaseSchema: scratchSchema,
+    schemaDelim: '.',
+    tempAchillesPrefix: opts.prefix,
+    cdmVersion: opts.cdmVersion,
+    source_name: sourceName,
+    achilles_version: opts.achillesVersion,
+    compatMode: opts.compatible ? '1' : '0'
+  }
 
   console.log('Creating results tables...')
   await createResultsTables(opts.resultsSchema)
