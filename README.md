@@ -26,6 +26,8 @@ node index.js \
 
 ### Container
 
+Images are published to the CHI registry (`docker login chi-tools.uc.edu`):
+
 ```sh
 docker run --rm \
   -e ACHILLES_SERVER=<host> \
@@ -33,14 +35,19 @@ docker run --rm \
   -e ACHILLES_CDM_SCHEMA=<schema> \
   -e ACHILLES_RESULTS_SCHEMA=<schema> \
   -e ACHILLES_USERNAME=<user> \
-  -e ACHILLES_PASSWORD=<pass> \
-  ghcr.io/center-for-health-informatics/achilles
+  -e ACHILLES_PASSWORD \
+  chi-tools.uc.edu/achilles:1.2.0
 ```
 
-Build the image locally:
+(`-e ACHILLES_PASSWORD` with no value passes it through from your shell, so it
+isn't left in your shell history.)
+
+To build the multi-arch image with Apple's `container` tool, and with
+`PUSH=1` scan it and push it (the tag is the version in `package.json`):
 
 ```sh
-docker build -t achilles .
+./build.sh
+PUSH=1 ./build.sh
 ```
 
 Results and scratch tables land in `--results-schema` / `ACHILLES_RESULTS_SCHEMA` by default. Use `--scratch-schema` / `ACHILLES_SCRATCH_SCHEMA` to separate them if needed.
