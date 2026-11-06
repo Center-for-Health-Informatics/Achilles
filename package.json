@@ -22,6 +22,6 @@
   "dependencies": {
     "commander": "^15.0.0",
     "csv-parse": "^7.0.0",
-    "mssql": "^12.5.5"
+    "mssql": "^12.7.14"
   }
 }
