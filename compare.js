@@ -8,6 +8,8 @@ program
   .addOption(new Option('--database <name>', 'database name').env('ACHILLES_DATABASE').makeOptionMandatory())
   .addOption(new Option('--username <user>', 'SQL Server username').env('ACHILLES_USERNAME'))
   .addOption(new Option('--password <pass>', 'SQL Server password').env('ACHILLES_PASSWORD'))
+  .addOption(new Option('--no-encrypt', 'connect without TLS (default: TLS, certificate validated)').env('ACHILLES_NO_ENCRYPT'))
+  .addOption(new Option('--trust-server-certificate', 'accept the server certificate without validating it').env('ACHILLES_TRUST_SERVER_CERTIFICATE'))
   .addOption(new Option('--schema-a <schema>', 'first (ours) results schema').env('COMPARE_SCHEMA_A').default('chi_achilles'))
   .addOption(new Option('--schema-b <schema>', 'second (reference) results schema').env('COMPARE_SCHEMA_B').default('ohdsi_achilles'))
 
@@ -18,7 +20,7 @@ const dbConfig = {
   server: opts.server,
   database: opts.database,
   requestTimeout: 300000,
-  options: { trustServerCertificate: true, encrypt: false }
+  options: { encrypt: opts.encrypt, trustServerCertificate: Boolean(opts.trustServerCertificate) }
 }
 if (opts.username) {
   dbConfig.user = opts.username

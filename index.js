@@ -19,6 +19,8 @@ program
   .addOption(new Option('--scratch-schema <schema>', 'scratch schema (defaults to results schema)').env('ACHILLES_SCRATCH_SCHEMA'))
   .addOption(new Option('--username <user>', 'SQL Server username (omit for Windows auth)').env('ACHILLES_USERNAME'))
   .addOption(new Option('--password <pass>', 'SQL Server password').env('ACHILLES_PASSWORD'))
+  .addOption(new Option('--no-encrypt', 'connect without TLS (default: TLS, certificate validated)').env('ACHILLES_NO_ENCRYPT'))
+  .addOption(new Option('--trust-server-certificate', 'accept the server certificate without validating it').env('ACHILLES_TRUST_SERVER_CERTIFICATE'))
   .addOption(new Option('--cdm-version <version>', 'CDM version (e.g. 5.3 or 5.4)').env('ACHILLES_CDM_VERSION').default('5.4'))
   .addOption(new Option('--source-name <name>', 'CDM source name (defaults to cdm_source table)').env('ACHILLES_SOURCE_NAME'))
   .addOption(new Option('--achilles-version <ver>', 'version string written to analysis 0').env('ACHILLES_VERSION').default(pkgVersion))
@@ -37,7 +39,7 @@ const dbConfig = {
   server: opts.server,
   database: opts.database,
   requestTimeout: 300000,
-  options: { trustServerCertificate: true, encrypt: false }
+  options: { encrypt: opts.encrypt, trustServerCertificate: Boolean(opts.trustServerCertificate) }
 }
 if (opts.username) {
   dbConfig.user = opts.username

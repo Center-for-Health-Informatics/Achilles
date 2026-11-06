@@ -58,6 +58,8 @@ All options can be set via CLI flag or environment variable. CLI flags take prec
 | `--scratch-schema` | `ACHILLES_SCRATCH_SCHEMA` | results schema | Schema for temporary scratch tables |
 | `--username` | `ACHILLES_USERNAME` | | SQL Server login (omit for Windows auth) |
 | `--password` | `ACHILLES_PASSWORD` | | SQL Server password |
+| `--no-encrypt` | `ACHILLES_NO_ENCRYPT` | | Connect without TLS. By default the connection is encrypted and the server certificate is validated |
+| `--trust-server-certificate` | `ACHILLES_TRUST_SERVER_CERTIFICATE` | | Encrypt, but accept the server certificate without validating it (self-signed dev servers) |
 | `--cdm-version` | `ACHILLES_CDM_VERSION` | `5.4` | CDM version (`5.3` or `5.4`) |
 | `--source-name` | `ACHILLES_SOURCE_NAME` | cdm_source table | CDM source name written to analysis 0 |
 | `--achilles-version` | `ACHILLES_VERSION` | package version | Version string written to analysis 0 |
@@ -100,6 +102,8 @@ node compare.js \
 | `--database` | `ACHILLES_DATABASE` | *(required)* | Database name |
 | `--username` | `ACHILLES_USERNAME` | | SQL Server login |
 | `--password` | `ACHILLES_PASSWORD` | | SQL Server password |
+| `--no-encrypt` | `ACHILLES_NO_ENCRYPT` | | Connect without TLS. By default the connection is encrypted and the server certificate is validated |
+| `--trust-server-certificate` | `ACHILLES_TRUST_SERVER_CERTIFICATE` | | Encrypt, but accept the server certificate without validating it (self-signed dev servers) |
 | `--schema-a` | `COMPARE_SCHEMA_A` | `chi_achilles` | First (ours) results schema |
 | `--schema-b` | `COMPARE_SCHEMA_B` | `ohdsi_achilles` | Second (reference) results schema |
 
