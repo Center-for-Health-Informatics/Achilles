@@ -1,7 +1,7 @@
 import { readFileSync } from 'fs'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
-import { program, Option } from 'commander'
+import { program, Option, InvalidArgumentError } from 'commander'
 import { connect, query, close } from './src/db.js'
 import { createResultsTables, populateAnalysisTable } from './src/tables.js'
 import { runAnalyses } from './src/run.js'
@@ -29,16 +29,23 @@ program
   .addOption(new Option('--small-cell-count <n>', 'suppress cells <= n').env('ACHILLES_SMALL_CELL_COUNT').default(5).argParser(v => parseInt(v)))
   .addOption(new Option('--analyses <ids>', 'comma-separated analysis IDs to run').env('ACHILLES_ANALYSES'))
   .addOption(new Option('--all-analyses', 'include non-default analyses (slower)').env('ACHILLES_ALL_ANALYSES'))
+  .addOption(new Option('--request-timeout <ms>', 'per-query timeout in milliseconds (0 = no limit)').env('ACHILLES_REQUEST_TIMEOUT').default(0).argParser(parseTimeout))
 
 program.parse()
 const opts = program.opts()
+
+function parseTimeout (v) {
+  const n = Number(v)
+  if (!Number.isInteger(n) || n < 0) throw new InvalidArgumentError('must be a whole number of milliseconds (0 = no limit)')
+  return n
+}
 
 const scratchSchema = opts.scratchSchema ?? opts.resultsSchema
 
 const dbConfig = {
   server: opts.server,
   database: opts.database,
-  requestTimeout: 300000,
+  requestTimeout: opts.requestTimeout,
   options: { encrypt: opts.encrypt, trustServerCertificate: Boolean(opts.trustServerCertificate) }
 }
 if (opts.username) {
@@ -78,16 +85,30 @@ try {
     compatMode: opts.compatible ? '1' : '0'
   }
 
-  console.log('Creating results tables...')
-  await createResultsTables(opts.resultsSchema)
+  // A run limited to --analyses keeps every other analysis's results and
+  // replaces only the ones it reruns; a full run starts from empty tables.
+  const partial = analysisIds !== null
+  console.log(partial ? 'Checking results tables...' : 'Creating results tables...')
+  await createResultsTables(opts.resultsSchema, { keepExisting: partial })
 
   console.log('Populating analysis metadata...')
   await populateAnalysisTable(opts.resultsSchema)
 
   console.log('Running analyses...')
-  await runAnalyses(vars, { analysisIds, allAnalyses: opts.allAnalyses, smallCellCount: opts.smallCellCount })
+  const failed = await runAnalyses(vars, {
+    analysisIds,
+    allAnalyses: opts.allAnalyses,
+    smallCellCount: opts.smallCellCount,
+    replaceExisting: partial
+  })
 
-  console.log('Done.')
+  if (failed.length) {
+    console.log(`Done, but ${failed.length} ${failed.length === 1 ? 'analysis' : 'analyses'} failed. To rerun only those:`)
+    console.log(`  --analyses ${failed.join(',')}   (or ACHILLES_ANALYSES=${failed.join(',')})`)
+    process.exitCode = 1
+  } else {
+    console.log('Done.')
+  }
 } finally {
   await close()
 }

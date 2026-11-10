@@ -8,15 +8,21 @@ import { substitute } from './substitute.js'
 const dir = dirname(fileURLToPath(import.meta.url))
 const sqlDir = join(dir, '../sql')
 
-export async function createResultsTables (resultsDatabaseSchema) {
+// keepExisting: create the results tables only if they are missing, leaving
+// rows from earlier runs in place (used when rerunning a subset of analyses).
+export async function createResultsTables (resultsDatabaseSchema, { keepExisting = false } = {}) {
   await batch(substitute(
     await readFile(join(sqlDir, 'achilles_analysis_ddl.sql'), 'utf8'),
     { resultsDatabaseSchema }
   ))
 
+  const dropUnlessKept = table => keepExisting
+    ? ''
+    : `IF OBJECT_ID('${resultsDatabaseSchema}.${table}', 'U') IS NOT NULL DROP TABLE ${resultsDatabaseSchema}.${table};`
+
   await query(`
-    IF OBJECT_ID('${resultsDatabaseSchema}.achilles_results', 'U') IS NOT NULL
-      DROP TABLE ${resultsDatabaseSchema}.achilles_results;
+    ${dropUnlessKept('achilles_results')}
+    IF OBJECT_ID('${resultsDatabaseSchema}.achilles_results', 'U') IS NULL
     CREATE TABLE ${resultsDatabaseSchema}.achilles_results (
       analysis_id   int,
       stratum_1     varchar(255),
@@ -29,8 +35,8 @@ export async function createResultsTables (resultsDatabaseSchema) {
   `)
 
   await query(`
-    IF OBJECT_ID('${resultsDatabaseSchema}.achilles_results_dist', 'U') IS NOT NULL
-      DROP TABLE ${resultsDatabaseSchema}.achilles_results_dist;
+    ${dropUnlessKept('achilles_results_dist')}
+    IF OBJECT_ID('${resultsDatabaseSchema}.achilles_results_dist', 'U') IS NULL
     CREATE TABLE ${resultsDatabaseSchema}.achilles_results_dist (
       analysis_id   int,
       stratum_1     varchar(255),

@@ -36,7 +36,7 @@ docker run --rm \
   -e ACHILLES_RESULTS_SCHEMA=<schema> \
   -e ACHILLES_USERNAME=<user> \
   -e ACHILLES_PASSWORD \
-  chi-tools.uc.edu/achilles:1.2.0
+  chi-tools.uc.edu/achilles:1.2.1
 ```
 
 (`-e ACHILLES_PASSWORD` with no value passes it through from your shell, so it
@@ -75,6 +75,7 @@ All options can be set via CLI flag or environment variable. CLI flags take prec
 | `--small-cell-count` | `ACHILLES_SMALL_CELL_COUNT` | `5` | Suppress result rows with count ≤ n |
 | `--analyses` | `ACHILLES_ANALYSES` | | Comma-separated list of analysis IDs to run |
 | `--all-analyses` | `ACHILLES_ALL_ANALYSES` | | Include non-default analyses (slow) |
+| `--request-timeout` | `ACHILLES_REQUEST_TIMEOUT` | `0` | Per-query timeout in milliseconds; `0` means no limit (as in R Achilles). The heaviest analyses can run well past 5 minutes on a large CDM |
 
 ### Run a subset of analyses
 
@@ -84,6 +85,13 @@ node index.js --server localhost --database Testing \
   --username sa --password '...' \
   --analyses 1,2,3,4,5
 ```
+
+A run limited with `--analyses` keeps the results of every other analysis and
+replaces only the ones it reruns. A full run (no `--analyses`) drops and
+recreates the results tables first.
+
+When analyses fail, the run ends by printing the `--analyses` list that reruns
+just those, and exits with status 1.
 
 ### Non-default analyses
 
@@ -113,12 +121,13 @@ node compare.js \
 | `--trust-server-certificate` | `ACHILLES_TRUST_SERVER_CERTIFICATE` | | Encrypt, but accept the server certificate without validating it (self-signed dev servers) |
 | `--schema-a` | `COMPARE_SCHEMA_A` | `chi_achilles` | First (ours) results schema |
 | `--schema-b` | `COMPARE_SCHEMA_B` | `ohdsi_achilles` | Second (reference) results schema |
+| `--request-timeout` | `ACHILLES_REQUEST_TIMEOUT` | `0` | Per-query timeout in milliseconds; `0` means no limit |
 
 The comparison automatically handles the known intentional differences described below, treating them as `NOTE` rather than `FAIL`.
 
 ## How it works
 
-Each numbered file in `sql/analyses/` is a self-contained SQL query that writes to a scratch table. After each query succeeds, its rows are inserted into the final results table and the scratch table is dropped. The process is single-threaded and restartable — if a run is interrupted, the next run drops any leftover scratch tables before proceeding.
+Each numbered file in `sql/analyses/` is a self-contained SQL query that writes to a scratch table. After each query succeeds, its rows are merged into the final results table and the scratch table is dropped, in one transaction (on a partial run the analysis's earlier rows are deleted in that same transaction). A failed analysis leaves the results tables unchanged. Each analysis's elapsed time is printed as it finishes. The process is single-threaded and restartable — if a run is interrupted, the next run drops any leftover scratch tables before proceeding.
 
 `sql/achilles_analysis_details.csv` is the canonical list of analyses and their metadata, copied from the upstream Achilles repository.
 

@@ -1,4 +1,4 @@
-import { program, Option } from 'commander'
+import { program, Option, InvalidArgumentError } from 'commander'
 import { connect, query, close } from './src/db.js'
 
 program
@@ -12,14 +12,21 @@ program
   .addOption(new Option('--trust-server-certificate', 'accept the server certificate without validating it').env('ACHILLES_TRUST_SERVER_CERTIFICATE'))
   .addOption(new Option('--schema-a <schema>', 'first (ours) results schema').env('COMPARE_SCHEMA_A').default('chi_achilles'))
   .addOption(new Option('--schema-b <schema>', 'second (reference) results schema').env('COMPARE_SCHEMA_B').default('ohdsi_achilles'))
+  .addOption(new Option('--request-timeout <ms>', 'per-query timeout in milliseconds (0 = no limit)').env('ACHILLES_REQUEST_TIMEOUT').default(0).argParser(parseTimeout))
 
 program.parse()
 const opts = program.opts()
 
+function parseTimeout (v) {
+  const n = Number(v)
+  if (!Number.isInteger(n) || n < 0) throw new InvalidArgumentError('must be a whole number of milliseconds (0 = no limit)')
+  return n
+}
+
 const dbConfig = {
   server: opts.server,
   database: opts.database,
-  requestTimeout: 300000,
+  requestTimeout: opts.requestTimeout,
   options: { encrypt: opts.encrypt, trustServerCertificate: Boolean(opts.trustServerCertificate) }
 }
 if (opts.username) {
