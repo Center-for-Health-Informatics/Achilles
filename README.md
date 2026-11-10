@@ -36,7 +36,7 @@ docker run --rm \
   -e ACHILLES_RESULTS_SCHEMA=<schema> \
   -e ACHILLES_USERNAME=<user> \
   -e ACHILLES_PASSWORD \
-  chi-tools.uc.edu/achilles:1.2.1
+  chi-tools.uc.edu/achilles:1.2.2
 ```
 
 (`-e ACHILLES_PASSWORD` with no value passes it through from your shell, so it
@@ -127,7 +127,7 @@ The comparison automatically handles the known intentional differences described
 
 ## How it works
 
-Each numbered file in `sql/analyses/` is a self-contained SQL query that writes to a scratch table. After each query succeeds, its rows are merged into the final results table and the scratch table is dropped, in one transaction (on a partial run the analysis's earlier rows are deleted in that same transaction). A failed analysis leaves the results tables unchanged. Each analysis's elapsed time is printed as it finishes. The process is single-threaded and restartable — if a run is interrupted, the next run drops any leftover scratch tables before proceeding.
+Each numbered file in `sql/analyses/` is a self-contained SQL query that writes to a scratch table. After each query succeeds, its rows are merged into the final results table and the scratch table is dropped, in one transaction (on a partial run the analysis's earlier rows are deleted in that same transaction). A failed analysis leaves the results tables unchanged. Each analysis's elapsed time is printed as it finishes. After the analyses, the run creates any of R Achilles's eight indexes on `achilles_results` and `achilles_results_dist` that are missing (`analysis_id`, `stratum_1`, `stratum_2` and combinations); Atlas's Data Sources reports depend on them. The process is single-threaded and restartable — if a run is interrupted, the next run drops any leftover scratch tables before proceeding.
 
 `sql/achilles_analysis_details.csv` is the canonical list of analyses and their metadata, copied from the upstream Achilles repository.
 

@@ -3,7 +3,7 @@ import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import { program, Option, InvalidArgumentError } from 'commander'
 import { connect, query, close } from './src/db.js'
-import { createResultsTables, populateAnalysisTable } from './src/tables.js'
+import { createResultsTables, createIndexes, populateAnalysisTable } from './src/tables.js'
 import { runAnalyses } from './src/run.js'
 
 const dir = dirname(fileURLToPath(import.meta.url))
@@ -101,6 +101,13 @@ try {
     smallCellCount: opts.smallCellCount,
     replaceExisting: partial
   })
+
+  // After the analyses, as R Achilles does: inserting into unindexed tables is
+  // faster, and indexes built once at the end are compact.
+  process.stdout.write('Creating indexes...')
+  const indexStart = performance.now()
+  const created = await createIndexes(opts.resultsSchema)
+  console.log(` ${created.length ? `created ${created.length}` : 'all present'} (${((performance.now() - indexStart) / 1000).toFixed(1)}s)`)
 
   if (failed.length) {
     console.log(`Done, but ${failed.length} ${failed.length === 1 ? 'analysis' : 'analyses'} failed. To rerun only those:`)
