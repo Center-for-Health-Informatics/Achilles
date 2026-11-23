@@ -17,9 +17,9 @@ node compare.js --server <host> --database <db> --schema-a chi_achilles --schema
 PUSH=1 ./build.sh                       # + trivy scan, syft SBOM, push to chi-tools.uc.edu
 ```
 
-Every CLI flag also has an `ACHILLES_*` env var (see the options table in README.md); CLI flags win.
+Every CLI flag also has an env var (see the options tables in README.md), named `ACHILLES_*` except for `compare.js`'s `--schema-a`/`--schema-b`, which use `COMPARE_SCHEMA_A`/`COMPARE_SCHEMA_B`. CLI flags win.
 
-There is no test suite, linter or build step. The way to verify a change is to run it against a real SQL Server CDM and, for anything that touches output, run `compare.js` against an R Achilles results schema. `compare.js` reports `PASS`/`FAIL`/`NOTE` and exits 1 on any `FAIL`; known intentional differences (analysis 1900 visit_detail rows, R's timing records with `analysis_id >= 2000000`) are `NOTE`s.
+There is no test suite, linter or build step. The way to verify a change is to run it against a real SQL Server CDM and, for anything that touches output, run `compare.js` against an R Achilles results schema. `compare.js` reports `PASS`/`FAIL`/`NOTE` and exits 1 on any `FAIL`; known intentional differences (analysis 1900 visit_detail rows, R's timing records with `analysis_id >= 2000000`) and the skipped analysis 0 metadata are `NOTE`s in the per-analysis sections. The row-count section excludes only the timing records, so any extra 1900 rows from a run without `--compatible` still make it `FAIL` and the run exit 1.
 
 ## Architecture
 
@@ -42,7 +42,7 @@ The flow (`index.js`): parse options → connect (`src/db.js`, a single module-l
 ## Conventions and gotchas
 
 - To make output diverge from R Achilles on purpose: gate the R behaviour behind `compatMode` (`--compatible`), document it in README.md, and teach `compare.js` to report it as a `NOTE`.
-- The runtime image is distroless: no shell, no npm. Only `node`, `node_modules`, `index.js`, `compare.js`, `src/` and `sql/` are copied in. A new top-level runtime file must be added to the Dockerfile's `COPY` lines. Base images are pinned by digest.
+- The runtime image is distroless: no shell, no npm. Only `node`, `node_modules`, `package*.json` (`index.js` reads the version from `package.json`), `index.js`, `compare.js`, `src/` and `sql/` are copied in. A new top-level runtime file must be added to the Dockerfile's `COPY` lines. Base images are pinned by digest.
 - Image tags come from `package.json`'s `version` and are never reused. Bump the version (and the image tag in README.md's `docker run` example) before `PUSH=1`. `build.sh` won't push from a dirty tree unless `FORCE=1` is set. It mentions a `.trivyignore`, but none is checked in.
 - Commit messages for releases start with the version, e.g. `1.2.2: ...`.
 - The default `--request-timeout` is `0` (no limit) on purpose, because some analyses run for many minutes on a large CDM.
