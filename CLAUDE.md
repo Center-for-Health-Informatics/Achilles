@@ -43,6 +43,6 @@ The flow (`index.js`): parse options → connect (`src/db.js`, a single module-l
 
 - To make output diverge from R Achilles on purpose: gate the R behaviour behind `compatMode` (`--compatible`), document it in README.md, and teach `compare.js` to report it as a `NOTE`.
 - The runtime image is distroless: no shell, no npm. Only `node`, `node_modules`, `package*.json` (`index.js` reads the version from `package.json`), `index.js`, `compare.js`, `src/` and `sql/` are copied in. A new top-level runtime file must be added to the Dockerfile's `COPY` lines. Base images are pinned by digest.
-- Image tags come from `package.json`'s `version` and are never reused. Bump the version (and the image tag in README.md's `docker run` example) before `PUSH=1`. `build.sh` won't push from a dirty tree unless `FORCE=1` is set. It mentions a `.trivyignore`, but none is checked in.
+- Image tags come from `package.json`'s `version` and are never reused. Bump the version (and the image tag in README.md's `docker run` example) before `PUSH=1`. `build.sh` won't push from a dirty tree unless `FORCE=1` is set. It mentions a `.trivyignore`, but none is checked in. Everything below its marker line is canonical, copied from chi-platform's `build-sh/template.sh`; edit it there.
 - Commit messages for releases start with the version, e.g. `1.2.2: ...`.
 - The default `--request-timeout` is `0` (no limit) on purpose, because some analyses run for many minutes on a large CDM.
